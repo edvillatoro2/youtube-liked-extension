@@ -1,20 +1,49 @@
 <script setup lang="ts">
-import HelloWorld from '@/components/HelloWorld.vue'
+function testAuth() {
+  const chromeAPI = globalThis.chrome
+  if (!chromeAPI?.identity) {
+    console.error('chrome.identity not available')
+    return
+  }
+  chromeAPI.identity.getAuthToken({ interactive: true }, (token) => {
+    if (chromeAPI.runtime.lastError) {
+      console.error('Auth failed:', chromeAPI.runtime.lastError.message)
+    } else {
+      console.log('Auth success! Token:', token)
+    }
+  })
+}
 </script>
 
 <template>
-  <div>
+  <div class="bg-white">
     <a href="https://vite.dev" target="_blank">
-      <img src="@/assets/vite.svg" class="logo" alt="Vite logo">
+      <img src="@/assets/vite.svg" class="logo" alt="Vite logo" />
     </a>
     <a href="https://vuejs.org/" target="_blank">
-      <img src="@/assets/vue.svg" class="logo vue" alt="Vue logo">
+      <img src="@/assets/vue.svg" class="logo vue" alt="Vue logo" />
     </a>
     <a href="https://crxjs.dev/vite-plugin" target="_blank">
-      <img src="@/assets/crx.svg" class="logo crx" alt="crx logo">
+      <img src="@/assets/crx.svg" class="logo crx" alt="crx logo" />
     </a>
+    <div class="flex w-full">
+      <div class="rounded-full">
+        <input
+          class="p-2 rounded-l-full border border-slate-300 w-3/4"
+          type="text"
+          placeholder="Search"
+          name="search"
+        />
+        <button
+          class="p-2 border-l-0 border border-slate-300 cursor-pointer rounded-r-full bg-slate-200 hover:bg-[#646cff] w-1/4"
+          type="submit"
+          @click="testAuth"
+        >
+          button testAuth
+        </button>
+      </div>
+    </div>
   </div>
-  <HelloWorld msg="Vite + Vue + CRXJS" />
 </template>
 
 <style scoped>

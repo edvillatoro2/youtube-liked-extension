@@ -16,11 +16,24 @@ export default defineManifest({
   },
   content_scripts: [{
     js: ['src/content/main.ts'],
-    matches: ['https://*/*'],
+    // restrict to YouTube only
+    matches: ['https://www.youtube.com/*'],
   }],
+    oauth2: {
+    client_id: '316008795201-gkc93bslujdvfndr8urqhnf2n7m0nnsp.apps.googleusercontent.com',
+    scopes: [
+      'https://www.googleapis.com/auth/youtube.readonly'
+    ]
+    },
   permissions: [
     'sidePanel',
     'contentSettings',
+    'identity',
+    'storage'
+  ],
+  host_permissions: [
+    'https://www.googleapis.com/*',
+    'https://accounts.google.com/*'
   ],
   side_panel: {
     default_path: 'src/sidepanel/index.html',
