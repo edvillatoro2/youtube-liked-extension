@@ -25,15 +25,12 @@ export default defineManifest({
       'https://www.googleapis.com/auth/youtube.readonly'
     ]
     },
-  permissions: [
-    'sidePanel',
-    'contentSettings',
-    'identity',
-    'storage'
-  ],
+  permissions: ['identity', 'storage', 'tabs', 'sidePanel'],
   host_permissions: [
     'https://www.googleapis.com/*',
-    'https://accounts.google.com/*'
+    'https://www.youtube.com/*',
+    'https://accounts.google.com/*',
+    'https://oauth2.googleapis.com/*'
   ],
   side_panel: {
     default_path: 'src/sidepanel/index.html',

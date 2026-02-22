@@ -1,1 +1,1 @@
-{"root":["./manifest.config.ts","./vite.config.ts","./src/content/main.ts","./src/content/views/app.vue","./src/popup/app.vue","./src/popup/main.ts","./src/services/youtube.ts","./src/sidepanel/app.vue","./src/sidepanel/main.ts"],"version":"5.8.3"}
+{"root":["./manifest.config.ts","./vite.config.ts","./src/config/categories.ts","./src/content/main.ts","./src/content/views/app.vue","./src/popup/app.vue","./src/popup/main.ts","./src/services/youtube.ts","./src/sidepanel/app.vue","./src/sidepanel/main.ts"],"version":"5.8.3"}
