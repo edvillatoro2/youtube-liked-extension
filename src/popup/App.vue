@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { fetchAllLikedVideos, getToken, getTokenWithAccountPicker, videosCategories, type VideoItem } from '@/services/youtube'
+import { fetchAllLikedVideos, getTokenWithAccountPicker, videosCategories, type VideoItem } from '@/services/youtube'
 import { getVideosFromBackground, setVideosInBackground, clearBackground } from '@/services/background'
 import { Categories } from '@/config/categories'
 
@@ -12,6 +12,8 @@ const activeCategory = ref('all')
 const activeChannel = ref<{ title: string, thumbnail: string } | null>(null)
 const currentPage = ref(1)
 const pageSize = 25
+
+const isLoggedIn = computed(() => !!activeChannel.value)
 
 const results = computed(() => {
   if (!Array.isArray(videos.value)) return []
@@ -49,6 +51,15 @@ async function fetchChannelAndVideos(token: string) {
   )
   const data = await res.json()
 
+  // if token is expired clear everything and force to login in again
+  if (res.status === 401) {
+    await clearBackground()
+    await globalThis.chrome.storage.local.clear()
+    error.value = "session expired. login in again"
+    loading.value = false
+    return
+  }
+
   if (data.items?.[0]) {
     activeChannel.value = {
       title: data.items[0].snippet.title,
@@ -67,19 +78,18 @@ async function fetchChannelAndVideos(token: string) {
     description: ''
   }))
 
-  // Store full video list in service worker memory
+  // store full video list in service worker memory
   await setVideosInBackground(videos.value)
 
-  // Only store lightweight data in chrome.storage
+  // only store lightweight data in chrome.storage
   await globalThis.chrome.storage.local.set({
     activeChannel: activeChannel.value,
     fetchedAt: Date.now()
   })
-
   console.log('fetched and cached:', videos.value.length, 'videos')
 }
 
-async function load() {
+async function load(interactive = false) {
   loading.value = true
   error.value = null
   try {
@@ -93,13 +103,12 @@ async function load() {
       webFlowToken?: string
     }
 
-    const oneHour = 60 * 60 * 1000
+    const oneHour = 50 * 60 * 1000
     const cacheValid = cache.activeChannel &&
       cache.fetchedAt &&
       Date.now() - cache.fetchedAt < oneHour
 
     if (cacheValid) {
-      // Try to get videos from service worker memory first
       const bgVideos = await getVideosFromBackground()
       if (bgVideos.length > 0) {
         videos.value = bgVideos
@@ -109,22 +118,15 @@ async function load() {
       }
     }
 
-    // Need to re-fetch — use stored token if available
     if (cache.webFlowToken) {
       await fetchChannelAndVideos(cache.webFlowToken)
-    } else {
-      const silentToken = await new Promise<string | null>((resolve) => {
-        globalThis.chrome.identity.getAuthToken({ interactive: false }, (t) => {
-          resolve(t as string ?? null)
-        })
-      })
-      if (silentToken) {
-        await fetchChannelAndVideos(silentToken)
-      } else {
-        const token = await getToken()
-        await fetchChannelAndVideos(token)
-      }
+    } else if (interactive) {
+      // always use launchWebAuthFlow — works for both regular and brand accounts
+      const token = await getTokenWithAccountPicker()
+      await globalThis.chrome.storage.local.set({ webFlowToken: token })
+      await fetchChannelAndVideos(token)
     }
+    // if not interactive and no stored token, just show Login button
   } catch (e: any) {
     console.error(e)
     error.value = e.message
@@ -160,25 +162,26 @@ async function switchAccount() {
   }
 }
 
-onMounted(load)
+onMounted(() => load(false))
 </script>
 
 <template>
-  <div class="p-4 flex flex-col gap-4">
+  <div class="flex flex-col gap-4">
     <!-- switch account button -->
     <div class="flex items-center justify-between">
       <div v-if="activeChannel" class="flex items-center gap-2">
         <img :src="activeChannel.thumbnail" class="w-6 h-6 rounded-full" />
         <span class="text-sm font-medium">{{ activeChannel.title }}</span>
       </div>
-      <div class="flex">
-        <button
-          @click="switchAccount"
-          class="text-xs text-gray-400 underline whitespace-nowrap"
-        >
-          Switch Account
-        </button>
+      <div class="text-xs text-gray-400 underline whitespace-nowrap" v-else> 
+        log into your account
       </div>
+      <button
+        @click="isLoggedIn ? switchAccount() : load(true)"
+        class="text-xs text-gray-400 underline whitespace-nowrap"
+        >
+        {{ isLoggedIn ? 'Switch Acoount' : 'Login' }}
+      </button>
     </div>
 
     <!-- search bar -->
@@ -197,22 +200,21 @@ onMounted(load)
         :class="[
           'px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors',
           activeCategory === category.id
-            ? 'bg-red-600 text-white'
+            ? 'bg-[#ff0033] text-white'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
         ]"
       >
         {{ category.label }}
       </button>
     </div>
-
-    <!-- States -->
     <p v-if="loading" class="text-gray-500 text-sm">Loading your liked videos...</p>
     <p v-if="error" class="text-red-500 text-sm">{{ error }}</p>
-    <p v-if="!loading && !error && results.length === 0" class="text-gray-400 text-sm">
+    <p v-if="!loading && !error && !isLoggedIn" class="text-gray-400 text-sm">Login to view your liked videos</p>
+    <p v-if="!loading && error && isLoggedIn && results.length === 0" class="text-gray-400 text-sm">
       No videos found.
     </p>
 
-    <!-- Video List -->
+    <!-- video list -->
     <div v-for="v in paginatedResults" :key="v.id" class="flex gap-2">
       <a :href="v.url" target="_blank" class="flex gap-2 hover:opacity-80">
         <img :src="v.thumbnail" class="w-24 h-auto rounded flex-shrink-0" />
@@ -220,12 +222,12 @@ onMounted(load)
       </a>
     </div>
 
-    <!-- Pagination -->
+    <!-- pagination -->
     <div v-if="totalPages > 1" class="flex items-center justify-between mt-4">
       <button
         @click="currentPage--"
         :disabled="currentPage === 1"
-        class="px-3 py-1 rounded text-sm bg-gray-100 disabled:opacity-40"
+        class="px-2 py-1 rounded text-white text-sm bg-[#ff0033] disabled:opacity-40"
       >
         Prev
       </button>
@@ -235,7 +237,7 @@ onMounted(load)
       <button
         @click="currentPage++"
         :disabled="currentPage === totalPages"
-        class="px-3 py-1 rounded text-sm bg-gray-100 disabled:opacity-40"
+        class="px-2 py-1 rounded text-white text-sm bg-[#ff0033] disabled:opacity-40"
       >
         Next
       </button>
