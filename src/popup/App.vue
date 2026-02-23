@@ -164,7 +164,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="p-4 flex flex-col gap-4">
     <!-- switch account button -->
     <div class="flex items-center justify-between">
       <div v-if="activeChannel" class="flex items-center gap-2">
