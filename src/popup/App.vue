@@ -243,7 +243,7 @@ onMounted(() => load(false));
     <!-- video list -->
     <div v-for="v in paginatedResults" :key="v.id" class="flex gap-2">
       <a :href="v.url" target="_blank" class="flex gap-2 hover:opacity-80">
-        <img :src="v.thumbnail" class="w-24 h-auto rounded flex-shrink-0" />
+        <img :src="v.thumbnail" class="w-24 h-auto rounded shrink-0" />
         <span class="text-sm">{{ v.title }}</span>
       </a>
     </div>
