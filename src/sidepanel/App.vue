@@ -199,7 +199,7 @@ onMounted(() => load(false));
         @click="isLoggedIn ? switchAccount() : load(true)"
         class="text-xs text-gray-400 underline whitespace-nowrap"
       >
-        {{ isLoggedIn ? "Switch Acoount" : "Login" }}
+        {{ isLoggedIn ? "Switch Account" : "Login" }}
       </button>
     </div>
 
