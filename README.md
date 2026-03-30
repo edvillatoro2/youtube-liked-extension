@@ -87,3 +87,5 @@ manifest.config.ts  # Chrome extension manifest configuration
 ## 🔗 Status
 
 Currently under review for Chrome Web Store publication.
+
+<!-- google-site-verification: google075ccda66fe42a09.html -->
